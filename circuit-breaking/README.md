@@ -64,7 +64,7 @@ Edit `linkerd.yml` to set the `successRate` threshold to `0.9` and the
 Redeploy the containers and look at the Grafana dashboard again:
 
 ```bash
-docker-compose stop
+docker-compose down
 docker-compose build
 docker-compose up -d
 open http://localhost:3000 # or docker ip address

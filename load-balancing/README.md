@@ -63,7 +63,7 @@ Linkerd reads its configuration from `linkerd.yml`.  Edit `linkerd.yml` to use
 Redeploy the containers and look at the Grafana dashboard again:
 
 ```bash
-docker-compose stop
+docker-compose down
 docker-compose build
 docker-compose up -d
 open http://localhost:3000 # or docker ip address
