@@ -76,3 +76,11 @@ Note the success rate:
 
 Notice the distribution of request volume per instance.  Do some servers seem
 to be serving more requests than others, or are they all roughly the same?
+
+## Clean up
+
+Stop and remove all running containers:
+
+```bash
+docker-compose down
+```

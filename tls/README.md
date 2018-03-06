@@ -107,4 +107,13 @@ docker-compose up -d
 docker-compose logs -f tshark | sed 's/.*HTTP\/1.1//'
 ```
 
-Are the responses from the backend server still visisble?
+Are the responses from the backend server still visisble?  Does tshark print
+anything at all?  Why?
+
+## Clean up
+
+Stop and remove all running containers:
+
+```bash
+docker-compose down
+```
