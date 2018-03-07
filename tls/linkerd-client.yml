@@ -15,5 +15,5 @@ routers:
     # initiate TLS on all outgoing connections it creates.
     tls:
       trustCerts:
-      - # FIXME
-      commonName: # FIXME
+      - /ca-chain.cert.pem
+      commonName: linkerd

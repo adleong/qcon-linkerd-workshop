@@ -15,8 +15,7 @@ It also contains some sample TLS credentials.
 Start the above containers by running:
 
 ```bash
-docker-compose build
-docker-compose up -d
+docker-compose build && docker-compose up -d
 ```
 
 ```
@@ -69,24 +68,52 @@ backend server that will terminate TLS.
       - "/io/buoyant/linkerd/config.yml"
 ```
 
-Edit the Slow Cooker service in `docker-compose.yml` to send to 
-`http://linkerd:4140` instead of `http://server1:8501`.
+Now let's point the load generator at Linkerd, rather than directly at the
+application. In `docker-compose.yml`, in the `slow_cooker` service section,
+replace `http://server:8501` with `http://linkerd:4140`:
+
+```yaml
+    command: >
+      -c 'sleep 15 && slow_cooker -noreuse -metric-addr :8505 -qps 20 -concurrency 15 -interval 5s -totalRequests 10000000 http://linkerd:4140'
+```
 
 The instances read their configuration from `linkerd-client.yml` and
-`linkerd-server.yml` respectively.  
+`linkerd-server.yml` respectively.
 
 Edit `linkerd-client.yml` to configure the client Linkerd to initiate TLS.  Add
-`/ca-chain.cert.pem` as a `trustCert` and set the `commonName` to Linkerd.
+`/ca-chain.cert.pem` as a `trustCert` and set the `commonName` to `linkerd`.
 These values tell Linkerd to use the CA in this directory to validate that
-the server has a valid certificate for the name "linkerd".
+the server has a valid certificate for the name "linkerd":
+
+```yaml
+  client:
+    # By configuring TLS in the `client` section, we are telling Linkerd to
+    # initiate TLS on all outgoing connections it creates.
+    tls:
+      trustCerts:
+      - /ca-chain.cert.pem
+      commonName: linkerd
+```
 
 Edit `linkerd-server.yml` to configure the server Linkerd to terminate TLS.  Set
 `certPath` to `/cert.pem` and `keyPath` to `/private.pk8` to tell Linkerd to
 use the certificate and private key from this directory.  These are valid
 credentials for the common name "linkerd".
 
+```yaml
+    # By configuring TLS in the `servers` section, we are telling Linkerd to
+    # expect that all incoming connections will be encrypted with TLS.
+    tls:
+      certPath: /cert.pem
+      keyPath: /private.pk8
+```
+
 Finally, edit the tshark service in `docker-compose.yml` to read traffic on port
-4141 instead of port 8501.
+4141 instead of port 8501:
+
+```yaml
+command: [ "tshark", "-qi", "any", "-O", "http", "-f", "tcp port 4141", "-Y", "http.response.code == 200", "-T", "fields", "-e", "text" ]
+```
 
 ```
 Slow_cooker ---> :4140 Linkerd-client ===> :4141 Linkerd-server ---> :8501 Server1
@@ -101,8 +128,6 @@ Slow_cooker ---> :4140 Linkerd-client ===> :4141 Linkerd-server ---> :8501 Serve
 Redeploy the containers and look at tshark's output again:
 
 ```bash
-docker-compose down
-docker-compose build
 docker-compose up -d
 docker-compose logs -f tshark | sed 's/.*HTTP\/1.1//'
 ```

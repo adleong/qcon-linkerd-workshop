@@ -11,7 +11,7 @@ routers:
     # By configuring TLS in the `servers` section, we are telling Linkerd to
     # expect that all incoming connections will be encrypted with TLS.
     tls:
-      certPath: # FIXME
-      keyPath: # FIXME
+      certPath: /cert.pem
+      keyPath: /private.pk8
   # A simple routing rule that sends all traffic to server1
   dtab: /svc/* => /$/inet/server1/8501

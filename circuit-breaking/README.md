@@ -13,8 +13,7 @@ directory contains a `docker-compose.yml` file which defines:
 Start the above containers by running:
 
 ```bash
-docker-compose build
-docker-compose up -d
+docker-compose build && docker-compose up -d
 ```
 
 View the Grafana dashboard
@@ -23,7 +22,7 @@ View the Grafana dashboard
 open http://localhost:3000 # or docker ip address
 ```
 
-Note the success rate:
+Fill in the success rate here:
 
 * success rate: ____
 
@@ -32,8 +31,8 @@ to be serving more requests than others, or are they all roughly the same?
 
 ## Adding Circuit-Breaking with Linkerd
 
-Add this Linkerd service to the `docker-compose.yml` file to add a Linkerd
-container:
+Now let's add a Linkerd service to the mix. Paste this section into the bottom
+of `docker-compose.yml`:
 
 ```yaml
   linkerd:
@@ -48,8 +47,14 @@ container:
       - "/io/buoyant/linkerd/config.yml"
 ```
 
-Edit the Slow Cooker service in `docker-compose.yml` to send to 
-`http://linkerd:4140` instead of `http://server:8501`.
+Now let's point the load generator at Linkerd, rather than directly at the
+application. In `docker-compose.yml`, in the `slow_cooker` service section,
+replace `http://server:8501` with `http://linkerd:4140`:
+
+```yaml
+    command: >
+      -c 'sleep 15 && slow_cooker -noreuse -metric-addr :8505 -qps 20 -concurrency 15 -interval 5s -totalRequests 10000000 http://linkerd:4140'
+```
 
 Linkerd reads its configuration from `linkerd.yml`.  Linkerd can be configured
 to use success rate based failure accrual.  What this means is that Linkerd will
@@ -59,13 +64,20 @@ threshold, Linkerd will trigger the circuit-breaker and stop sending traffic
 to that instance for a period of time.
 
 Edit `linkerd.yml` to set the `successRate` threshold to `0.9` and the
-`requests` sliding window size to `20`.
+`requests` sliding window size to `20`:
+
+```yaml
+    failureAccrual:
+      kind: io.l5d.successRate
+      # The success rate at which to trigger the circuit breaker
+      successRate: 0.9
+      # Calculate success rate over the last N requests
+      requests: 20
+```
 
 Redeploy the containers and look at the Grafana dashboard again:
 
 ```bash
-docker-compose down
-docker-compose build
 docker-compose up -d
 open http://localhost:3000 # or docker ip address
 ```

@@ -16,8 +16,7 @@ requests to each backend server.
 Start the above containers by running:
 
 ```bash
-docker-compose build
-docker-compose up -d
+docker-compose build && docker-compose up -d
 ```
 
 View the Grafana dashboard
@@ -38,8 +37,8 @@ to be serving more requests than others, or are they all roughly the same?
 
 ## Adding Latency Aware Load-Balancing with Linkerd
 
-Add this Linkerd service to the `docker-compose.yml` file to add a Linkerd
-container:
+Now let's add a Linkerd service to the mix. Paste this section into the bottom
+of `docker-compose.yml`:
 
 ```yaml
   linkerd:
@@ -54,17 +53,31 @@ container:
       - "/io/buoyant/linkerd/config.yml"
 ```
 
-Edit the Slow Cooker service in `docker-compose.yml` to send to 
-`http://linkerd:4140` instead of `http://server:8501`.
+Now let's point the load generator at Linkerd, rather than directly at the
+application. In `docker-compose.yml`, in the `slow_cooker` service section,
+replace `http://server:8501` with `http://linkerd:4140`:
+
+```yaml
+    command: >
+      -c 'sleep 15 && slow_cooker -noreuse -metric-addr :8505 -qps 10 -concurrency 50 -interval 5s -totalRequests 10000000 http://linkerd:4140'
+```
 
 Linkerd reads its configuration from `linkerd.yml`.  Edit `linkerd.yml` to use
-`ewma` as the load-balancer instead of `p2c`.
+`ewma` as the load-balancer instead of `p2c`:
+
+```yaml
+    loadBalancer:
+      # The p2c load balancer is a good general purpose load balancing algorithm
+      # that attempts to send requests to the destination with the fewest
+      # currently pending requests.  The ewma load balancer (Expoentially
+      # Weighted Moving Average) is a latency aware load balancing algorithm
+      # that performs better when latency is a good indicator of load.
+      kind: ewma
+```
 
 Redeploy the containers and look at the Grafana dashboard again:
 
 ```bash
-docker-compose down
-docker-compose build
 docker-compose up -d
 open http://localhost:3000 # or docker ip address
 ```
