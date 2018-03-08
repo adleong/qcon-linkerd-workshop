@@ -3,7 +3,7 @@ version: '2'
 services:
 
   # 10 simple backend servers written in Golang and each started with a
-  # different latency profile.  
+  # different latency profile.
   server1:
     build: .
     networks:
